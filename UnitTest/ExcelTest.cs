@@ -485,7 +485,15 @@ public static class GetInitialData
 
     public static DataSet GetDataSet()
     {
-        dsData.Tables.Add(GetDataTable());
+        DataTable dtData1 = new DataTable();
+        dtData1.TableName = "Test 1";
+        dtData1.Columns.Add("StudentId", typeof(int));
+        dtData1.Columns.Add("Name", typeof(string));
+        dtData1.Columns.Add("Age", typeof(double));
+        dtData1.Rows.Add(10000, "Jack", 15.00);
+        dtData1.Rows.Add(10100, "Smith", 17.02);
+        dtData1.Rows.Add(10200, "Keroro", 20.321);
+        dsData.Tables.Add(dtData1);
 
         DataTable dtData2 = new DataTable();
         dtData2.TableName = "Test 2";

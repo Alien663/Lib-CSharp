@@ -31,9 +31,3 @@ public static class DataTableExtensions
         return result;
     }
 }
-
-
-// Test Incremental Scanning
-// Test Incremental Scanning
-// Test Incremental Scanning
-// Test Incremental Scanning

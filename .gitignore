@@ -35,7 +35,8 @@ msbuild.wrn
 
 .vs/*
 
-*/[Bb]in/*
-*/[Oo]bj/*
-*/[Oo]ut/*
+*/[Bb]in/
+*/[Oo]bj/
+*/[Oo]ut/
 TestResults/*
+UnitTest/TestResults

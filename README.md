@@ -82,3 +82,6 @@ fs.Write(data, 0, data.Length);
 ## 📝授權
 
 MIT License - 請隨意使用、改造、甚至忘記我曾經存在。
+
+
+

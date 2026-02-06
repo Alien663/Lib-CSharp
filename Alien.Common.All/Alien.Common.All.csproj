@@ -12,7 +12,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Config\Alien.Common.Config.csproj" />
 		<ProjectReference Include="..\Excel\Alien.Common.Excel.csproj" />
 		<ProjectReference Include="..\Mail\Alien.Common.Mail.csproj" />
 		<ProjectReference Include="..\Utility\Alien.Common.Utility.csproj" />

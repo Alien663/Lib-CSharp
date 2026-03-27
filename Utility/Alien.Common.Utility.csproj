@@ -2,15 +2,35 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageId>Alien.Common.Utility</PackageId>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<PackageVersion>1.0.0</PackageVersion>
+		<PackageIcon>icon.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<Description>Utility functions and helpers for .NET</Description>
+		<PackageTags>utility helper alien common</PackageTags>
+		<RepositoryUrl>https://github.com/Alien663/Lib-Cscharp</RepositoryUrl>
+		<Authors>Alien663</Authors>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\icon.png" Link="icon.png">
       <PackagePath>\</PackagePath>
       <Pack>True</Pack>
+    </None>
+    <None Include="..\LICENSE">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
 

@@ -23,7 +23,7 @@ public class Write_DataTable
 
         #region Act
         using ExcelWriter writer = new ExcelWriter();
-        byte[] data = writer.export(dtData);
+        byte[] data = writer.Export(dtData);
         using (FileStream fs = File.Create(filename))
         {
             fs.Write(data, 0, data.Length);
@@ -32,20 +32,15 @@ public class Write_DataTable
 
         #region Assert
         FileAssert.Exists(filename);
-        using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+        byte[] myfile = File.ReadAllBytes(filename);
+        using (ExcelReader reader = new ExcelReader())
         {
-            MemoryStream ms = new MemoryStream();
-            fs.CopyTo(ms);
-            ms.Position = 0;
-            using (ExcelReader reader = new ExcelReader())
+            DataTable result = reader.ToDataTable(myfile);
+            for (int i = 0; i < result.Rows.Count; i++)
             {
-                DataTable result = reader.readFileDT(ms);
-                for (int i = 0; i < result.Rows.Count; i++)
+                for (int j = 0; j < result.Columns.Count; j++)
                 {
-                    for (int j = 0; j < result.Columns.Count; j++)
-                    {
-                        Assert.That(result.Rows[i][j].ToString(), Is.EqualTo(dtData.Rows[i][j].ToString()));
-                    }
+                    Assert.That(result.Rows[i][j].ToString(), Is.EqualTo(dtData.Rows[i][j].ToString()));
                 }
             }
         }
@@ -61,8 +56,8 @@ public class Write_DataTable
 
         #region Act
         using ExcelWriter writer = new ExcelWriter();
-        writer.setAnchor(2, 3);
-        byte[] data = writer.export(dtData);
+        writer.SetAnchor(2, 3);
+        byte[] data = writer.Export(dtData);
         using (FileStream fs = File.Create(filename))
         {
             fs.Write(data, 0, data.Length);
@@ -71,21 +66,16 @@ public class Write_DataTable
 
         #region Assert
         FileAssert.Exists(filename);
-        using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+        byte[] myfile = File.ReadAllBytes(filename);
+        using (ExcelReader reader = new ExcelReader())
         {
-            MemoryStream ms = new MemoryStream();
-            fs.CopyTo(ms);
-            ms.Position = 0;
-            using (ExcelReader reader = new ExcelReader())
+            reader.SetAnchor(2, 3);
+            DataTable result = reader.ToDataTable(myfile);
+            for (int i = 0; i < result.Rows.Count; i++)
             {
-                reader.setAnchor(2, 3);
-                DataTable result = reader.readFileDT(ms);
-                for (int i = 0; i < result.Rows.Count; i++)
+                for (int j = 0; j < result.Columns.Count; j++)
                 {
-                    for (int j = 0; j < result.Columns.Count; j++)
-                    {
-                        Assert.That(result.Rows[i][j].ToString(), Is.EqualTo(dtData.Rows[i][j].ToString()));
-                    }
+                    Assert.That(result.Rows[i][j].ToString(), Is.EqualTo(dtData.Rows[i][j].ToString()));
                 }
             }
         }
@@ -102,7 +92,7 @@ public class Write_DataTable
         #region Act
         using ExcelWriter writer = new ExcelWriter();
         writer.setDataTypeStyle(new Dictionary<string, string> { { "Double", "#,##0.0000" } });
-        byte[] data = writer.export(dtData);
+        byte[] data = writer.Export(dtData);
         using (FileStream fs = File.Create(filename))
         {
             fs.Write(data, 0, data.Length);
@@ -111,20 +101,15 @@ public class Write_DataTable
 
         #region Assert
         FileAssert.Exists(filename);
-        using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+        byte[] myfile = File.ReadAllBytes(filename);
+        using (ExcelReader reader = new ExcelReader())
         {
-            MemoryStream ms = new MemoryStream();
-            fs.CopyTo(ms);
-            ms.Position = 0;
-            using (ExcelReader reader = new ExcelReader())
+            DataTable result = reader.ToDataTable(myfile);
+            for (int i = 0; i < result.Rows.Count; i++)
             {
-                DataTable result = reader.readFileDT(ms);
-                for (int i = 0; i < result.Rows.Count; i++)
+                for (int j = 0; j < result.Columns.Count; j++)
                 {
-                    for (int j = 0; j < result.Columns.Count; j++)
-                    {
-                        Assert.That(result.Rows[i][j].ToString(), Is.EqualTo(dtData.Rows[i][j].ToString()));
-                    }
+                    Assert.That(result.Rows[i][j].ToString(), Is.EqualTo(dtData.Rows[i][j].ToString()));
                 }
             }
         }
@@ -154,7 +139,7 @@ public class Write_DataSet
 
         #region Act
         using ExcelWriter writer = new ExcelWriter();
-        byte[] data = writer.export(dsData);
+        byte[] data = writer.Export(dsData);
         using (FileStream fs = File.Create(filename))
         {
             fs.Write(data, 0, data.Length);
@@ -163,22 +148,17 @@ public class Write_DataSet
 
         #region Assert
         FileAssert.Exists(filename);
-        using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+        byte[] myfile = File.ReadAllBytes(filename);
+        using (ExcelReader reader = new ExcelReader())
         {
-            MemoryStream ms = new MemoryStream();
-            fs.CopyTo(ms);
-            ms.Position = 0;
-            using (ExcelReader reader = new ExcelReader())
+            DataSet result = reader.ToDataSet(myfile);
+            for (int k = 0; k < result.Tables.Count; k++)
             {
-                DataSet result = reader.readFileDS(ms);
-                for (int k = 0; k < result.Tables.Count; k++)
+                for (int i = 0; i < result.Tables[k].Rows.Count; i++)
                 {
-                    for (int i = 0; i < result.Tables[k].Rows.Count; i++)
+                    for (int j = 0; j < result.Tables[k].Columns.Count; j++)
                     {
-                        for (int j = 0; j < result.Tables[k].Columns.Count; j++)
-                        {
-                            Assert.That(result.Tables[k].Rows[i][j].ToString(), Is.EqualTo(dsData.Tables[k].Rows[i][j].ToString()));
-                        }
+                        Assert.That(result.Tables[k].Rows[i][j].ToString(), Is.EqualTo(dsData.Tables[k].Rows[i][j].ToString()));
                     }
                 }
             }
@@ -195,8 +175,8 @@ public class Write_DataSet
 
         #region Act
         using ExcelWriter writer = new ExcelWriter();
-        writer.setAnchor(2, 3);
-        byte[] data = writer.export(dsData);
+        writer.SetAnchor(2, 3);
+        byte[] data = writer.Export(dsData);
         using (FileStream fs = File.Create(filename))
         {
             fs.Write(data, 0, data.Length);
@@ -205,23 +185,18 @@ public class Write_DataSet
 
         #region Assert
         FileAssert.Exists(filename);
-        using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+        byte[] myfile = File.ReadAllBytes(filename);
+        using (ExcelReader reader = new ExcelReader())
         {
-            MemoryStream ms = new MemoryStream();
-            fs.CopyTo(ms);
-            ms.Position = 0;
-            using (ExcelReader reader = new ExcelReader())
+            reader.SetAnchor(2, 3);
+            DataSet result = reader.ToDataSet(myfile);
+            for (int k = 0; k < result.Tables.Count; k++)
             {
-                reader.setAnchor(2, 3);
-                DataSet result = reader.readFileDS(ms);
-                for (int k = 0; k < result.Tables.Count; k++)
+                for (int i = 0; i < result.Tables[k].Rows.Count; i++)
                 {
-                    for (int i = 0; i < result.Tables[k].Rows.Count; i++)
+                    for (int j = 0; j < result.Tables[k].Columns.Count; j++)
                     {
-                        for (int j = 0; j < result.Tables[k].Columns.Count; j++)
-                        {
-                            Assert.That(result.Tables[k].Rows[i][j].ToString(), Is.EqualTo(dsData.Tables[k].Rows[i][j].ToString()));
-                        }
+                        Assert.That(result.Tables[k].Rows[i][j].ToString(), Is.EqualTo(dsData.Tables[k].Rows[i][j].ToString()));
                     }
                 }
             }
@@ -238,8 +213,8 @@ public class Write_DataSet
 
         #region Act
         using ExcelWriter writer = new ExcelWriter();
-        writer.setSheetRange(0, 1);
-        byte[] data = writer.export(dsData);
+        writer.SetSheetRange(0, 1);
+        byte[] data = writer.Export(dsData);
         using (FileStream fs = File.Create(filename))
         {
             fs.Write(data, 0, data.Length);
@@ -248,23 +223,18 @@ public class Write_DataSet
 
         #region Assert
         FileAssert.Exists(filename);
-        using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+        byte[] myfile = File.ReadAllBytes(filename);
+        using (ExcelReader reader = new ExcelReader())
         {
-            MemoryStream ms = new MemoryStream();
-            fs.CopyTo(ms);
-            ms.Position = 0;
-            using (ExcelReader reader = new ExcelReader())
+            reader.SetSheetRange(0, 1);
+            DataSet result = reader.ToDataSet(myfile);
+            for (int k = 0; k < result.Tables.Count; k++)
             {
-                reader.setSheetRange(0, 1);
-                DataSet result = reader.readFileDS(ms);
-                for (int k = 0; k < result.Tables.Count; k++)
+                for (int i = 0; i < result.Tables[k].Rows.Count; i++)
                 {
-                    for (int i = 0; i < result.Tables[k].Rows.Count; i++)
+                    for (int j = 0; j < result.Tables[k].Columns.Count; j++)
                     {
-                        for (int j = 0; j < result.Tables[k].Columns.Count; j++)
-                        {
-                            Assert.That(result.Tables[k].Rows[i][j].ToString(), Is.EqualTo(dsData.Tables[k].Rows[i][j].ToString()));
-                        }
+                        Assert.That(result.Tables[k].Rows[i][j].ToString(), Is.EqualTo(dsData.Tables[k].Rows[i][j].ToString()));
                     }
                 }
             }
@@ -282,7 +252,7 @@ public class Write_DataSet
         #region Act
         using ExcelWriter writer = new ExcelWriter();
         writer.setDataTypeStyle(new Dictionary<string, string> { { "Double", "#,##0.0000" } });
-        byte[] data = writer.export(dsData);
+        byte[] data = writer.Export(dsData);
         using (FileStream fs = File.Create(filename))
         {
             fs.Write(data, 0, data.Length);
@@ -291,22 +261,17 @@ public class Write_DataSet
 
         #region Assert
         FileAssert.Exists(filename);
-        using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+        byte[] myfile = File.ReadAllBytes(filename);
+        using (ExcelReader reader = new ExcelReader())
         {
-            MemoryStream ms = new MemoryStream();
-            fs.CopyTo(ms);
-            ms.Position = 0;
-            using (ExcelReader reader = new ExcelReader())
+            DataSet result = reader.ToDataSet(myfile);
+            for (int k = 0; k < result.Tables.Count; k++)
             {
-                DataSet result = reader.readFileDS(ms);
-                for (int k = 0; k < result.Tables.Count; k++)
+                for (int i = 0; i < result.Tables[k].Rows.Count; i++)
                 {
-                    for (int i = 0; i < result.Tables[k].Rows.Count; i++)
+                    for (int j = 0; j < result.Tables[k].Columns.Count; j++)
                     {
-                        for (int j = 0; j < result.Tables[k].Columns.Count; j++)
-                        {
-                            Assert.That(result.Tables[k].Rows[i][j].ToString(), Is.EqualTo(dsData.Tables[k].Rows[i][j].ToString()));
-                        }
+                        Assert.That(result.Tables[k].Rows[i][j].ToString(), Is.EqualTo(dsData.Tables[k].Rows[i][j].ToString()));
                     }
                 }
             }
@@ -338,7 +303,7 @@ public class Write_DataModel
 
         #region Act
         using ExcelWriter writer = new ExcelWriter();
-        byte[] data = writer.export(studentModels);
+        byte[] data = writer.Export(studentModels);
         using (FileStream fs = File.Create(filename))
         {
             fs.Write(data, 0, data.Length);
@@ -347,20 +312,15 @@ public class Write_DataModel
 
         #region Assert
         FileAssert.Exists(filename);
-        using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+        byte[] myfile = File.ReadAllBytes(filename);
+        using (ExcelReader reader = new ExcelReader())
         {
-            MemoryStream ms = new MemoryStream();
-            fs.CopyTo(ms);
-            ms.Position = 0;
-            using (ExcelReader reader = new ExcelReader())
+            List<StudentModel> result = reader.ToList<StudentModel>(myfile);
+            for (int i = 0; i < result.Count; i++)
             {
-                List<StudentModel> result = reader.readFileDM<StudentModel>(ms);
-                for (int i = 0; i < result.Count; i++)
-                {
-                    Assert.That(result[i].StudentId, Is.EqualTo(studentModels[i].StudentId));
-                    Assert.That(result[i].Name, Is.EqualTo(studentModels[i].Name));
-                    Assert.That(result[i].Age, Is.EqualTo(studentModels[i].Age));
-                }
+                Assert.That(result[i].StudentId, Is.EqualTo(studentModels[i].StudentId));
+                Assert.That(result[i].Name, Is.EqualTo(studentModels[i].Name));
+                Assert.That(result[i].Age, Is.EqualTo(studentModels[i].Age));
             }
         }
         #endregion
@@ -375,8 +335,8 @@ public class Write_DataModel
 
         #region Act
         using ExcelWriter writer = new ExcelWriter();
-        writer.setAnchor(2, 3);
-        byte[] data = writer.export(studentModels);
+        writer.SetAnchor(2, 3);
+        byte[] data = writer.Export(studentModels);
         using (FileStream fs = File.Create(filename))
         {
             fs.Write(data, 0, data.Length);
@@ -385,21 +345,16 @@ public class Write_DataModel
 
         #region Assert
         FileAssert.Exists(filename);
-        using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+        byte[] myfile = File.ReadAllBytes(filename);
+        using (ExcelReader reader = new ExcelReader())
         {
-            MemoryStream ms = new MemoryStream();
-            fs.CopyTo(ms);
-            ms.Position = 0;
-            using (ExcelReader reader = new ExcelReader())
+            reader.SetAnchor(2, 3);
+            List<StudentModel> result = reader.ToList<StudentModel>(myfile);
+            for (int i = 0; i < result.Count; i++)
             {
-                reader.setAnchor(2, 3);
-                List<StudentModel> result = reader.readFileDM<StudentModel>(ms);
-                for (int i = 0; i < result.Count; i++)
-                {
-                    Assert.That(result[i].StudentId, Is.EqualTo(studentModels[i].StudentId));
-                    Assert.That(result[i].Name, Is.EqualTo(studentModels[i].Name));
-                    Assert.That(result[i].Age, Is.EqualTo(studentModels[i].Age));
-                }
+                Assert.That(result[i].StudentId, Is.EqualTo(studentModels[i].StudentId));
+                Assert.That(result[i].Name, Is.EqualTo(studentModels[i].Name));
+                Assert.That(result[i].Age, Is.EqualTo(studentModels[i].Age));
             }
         }
         #endregion
@@ -415,7 +370,7 @@ public class Write_DataModel
         #region Act
         using ExcelWriter writer = new ExcelWriter();
         writer.setDataTypeStyle(new Dictionary<string, string> { { "Double", "#,##0.0000" } });
-        byte[] data = writer.export(studentModels);
+        byte[] data = writer.Export(studentModels);
         using (FileStream fs = File.Create(filename))
         {
             fs.Write(data, 0, data.Length);
@@ -424,6 +379,7 @@ public class Write_DataModel
 
         #region Assert
         FileAssert.Exists(filename);
+        byte[] myfile = File.ReadAllBytes(filename);
         using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
         {
             MemoryStream ms = new MemoryStream();
@@ -431,7 +387,7 @@ public class Write_DataModel
             ms.Position = 0;
             using (ExcelReader reader = new ExcelReader())
             {
-                List<StudentModel> result = reader.readFileDM<StudentModel>(ms);
+                List<StudentModel> result = reader.ToList<StudentModel>(myfile);
                 for (int i = 0; i < result.Count; i++)
                 {
                     Assert.That(result[i].StudentId, Is.EqualTo(studentModels[i].StudentId));
@@ -450,21 +406,6 @@ public class Write_DataModel
         File.Delete(@".\DataModel_Anchor.xlsx");
         File.Delete(@".\DataModel_DataType.xlsx");
     }
-}
-
-[TestFixture, Order(4)]
-public class Read_DataTable
-{
-}
-
-[TestFixture, Order(5)]
-public class Read_DataSet
-{
-}
-
-[TestFixture, Order(6)]
-public class Read_DataModel
-{
 }
 
 public static class GetInitialData

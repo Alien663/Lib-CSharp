@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>LibCSharp.Alien</id>
+    <version>1.0.0</version>
+    <authors>Alien663</authors>
+    <owners>Alien663</owners>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/Alien663/Lib-CSharp</projectUrl>
+    <description>A handy utility library for .NET developers.</description>
+    <tags>csharp dotnet utility mail excel config</tags>
+  </metadata>
+</package>

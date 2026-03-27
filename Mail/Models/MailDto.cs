@@ -1,4 +1,4 @@
-﻿using MimeKit;
+using MimeKit;
 
 namespace Alien.Common.Mail.Models;
 
@@ -8,33 +8,39 @@ public class MailDto
     public required List<string> To { get; set; }
     public List<string> CC { get; set; } = new List<string>();
     public List<string> BCC { get; set; } = new List<string>();
-    public List<string> Attachments { get; set; } = new List<string>();
     public required string Subject { get; set; }
     public string Body { get; set; } = "";
 
+    private MimeMessage? _message;
+    
     public MimeMessage message
     {
         get
         {
-            message.Subject = this.Subject;
-            message.Sender = new MailboxAddress(Sender, Sender);
-            foreach (var item in To) message.To.Add(new MailboxAddress(item, item));
-            foreach (var item in CC) message.Cc.Add(new MailboxAddress(item, item));
-            foreach (var item in BCC) message.Bcc.Add(new MailboxAddress(item, item));
+            if (_message == null)
+            {
+                _message = new MimeMessage();
+            }
+            
+            _message.Subject = this.Subject;
+            _message.Sender = new MailboxAddress(Sender, Sender);
+            
+            // 清除現有的收件人，避免重複添加
+            _message.To.Clear();
+            _message.Cc.Clear();
+            _message.Bcc.Clear();
+            
+            foreach (var item in To) _message.To.Add(new MailboxAddress(item, item));
+            foreach (var item in CC) _message.Cc.Add(new MailboxAddress(item, item));
+            foreach (var item in BCC) _message.Bcc.Add(new MailboxAddress(item, item));
+            
             var bodyBuilder = new BodyBuilder();
             bodyBuilder.HtmlBody = this.Body;
-            foreach (var item in Attachments)
-            {
-                if (!File.Exists(item))
-                {
-                    throw new ArgumentException("File not found", nameof(item));
-                }
-                bodyBuilder.Attachments.Add(item);
-            }
-            message.Body = bodyBuilder.ToMessageBody();
-            return message;
+            
+            _message.Body = bodyBuilder.ToMessageBody();
+            return _message;
         }
-        private set { message = value; }
+        private set { _message = value; }
     }
 
     public void setPicture(string ID, string FilePath, string Mime)
@@ -44,7 +50,7 @@ public class MailDto
             throw new ArgumentException("File not found", nameof(FilePath));
         }
         var bodyBuilder = new BodyBuilder();
-        bodyBuilder.HtmlBody = message.HtmlBody;
+        bodyBuilder.HtmlBody = this.Body;
 
         if(!bodyBuilder.HtmlBody.Contains($"cid:{ID}"))
         {
@@ -61,7 +67,9 @@ public class MailDto
                 IsAttachment = false
             }
         });
-        message.Body = bodyBuilder.ToMessageBody();
+        
+        // 更新 Body 而不是直接操作 message
+        this.Body = bodyBuilder.HtmlBody;
     }
     public void setPicture(MailPictureModel picture)
     {
@@ -70,7 +78,7 @@ public class MailDto
             throw new ArgumentException("File not found", nameof(picture.FilePath));
         }
         var bodyBuilder = new BodyBuilder();
-        bodyBuilder.HtmlBody = message.HtmlBody;
+        bodyBuilder.HtmlBody = this.Body;
         if (!bodyBuilder.HtmlBody.Contains($"cid:{picture.ID}"))
         {
             throw new ArgumentException("ID not found in body", nameof(picture.ID));
@@ -85,7 +93,9 @@ public class MailDto
                 IsAttachment = false
             }
         });
-        message.Body = bodyBuilder.ToMessageBody();
+        
+        // 更新 Body 而不是直接操作 message
+        this.Body = bodyBuilder.HtmlBody;
     }
     public void setPicture(List<MailPictureModel> pictures)
     {
@@ -93,5 +103,17 @@ public class MailDto
         {
             setPicture(picture);
         }
+    }
+
+    public void setAttachment(string FilePath)
+    {
+        if (!File.Exists(FilePath))
+        {
+            throw new ArgumentException("File not found", nameof(FilePath));
+        }
+        var bodyBuilder = new BodyBuilder();
+        bodyBuilder.HtmlBody = this.Body;
+        bodyBuilder.Attachments.Add(FilePath);
+        this.Body = bodyBuilder.HtmlBody;
     }
 }

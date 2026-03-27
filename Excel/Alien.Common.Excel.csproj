@@ -13,6 +13,7 @@
 		<PackageTags>excel closedxml npoi helper alien common</PackageTags>
 		<RepositoryUrl>https://github.com/Alien663/Lib-Cscharp</RepositoryUrl>
 		<Authors>Alien663</Authors>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -23,11 +24,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="NPOI" Version="2.7.3" />
+		<PackageReference Include="NPOI" Version="2.7.4" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<None Update="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\LICENSE">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
 		</None>

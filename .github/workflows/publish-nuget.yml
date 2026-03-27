@@ -1,0 +1,67 @@
+name: Publish NuGet Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'NuGet package version (optional, e.g. 1.2.3). Leave empty to use csproj version.'
+        required: false
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve package version
+        id: version
+        shell: bash
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+
+          if [ -n "$VERSION" ]; then
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "Using package version: $VERSION"
+          else
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "Using package versions from csproj files"
+          fi
+
+      - name: Restore
+        run: dotnet restore MyLib.sln
+
+      - name: Pack
+        shell: bash
+        run: |
+          mkdir -p artifacts
+
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION_ARG=""
+          if [ -n "$VERSION" ]; then
+            VERSION_ARG="/p:PackageVersion=$VERSION"
+          fi
+
+          dotnet pack Config/Alien.Common.Config.csproj -c Release -o artifacts --no-restore $VERSION_ARG
+          dotnet pack Excel/Alien.Common.Excel.csproj -c Release -o artifacts --no-restore $VERSION_ARG
+          dotnet pack Mail/Alien.Common.Mail.csproj -c Release -o artifacts --no-restore $VERSION_ARG
+          dotnet pack Alien.Common.All/Alien.Common.All.csproj -c Release -o artifacts --no-restore $VERSION_ARG
+
+      - name: Publish to NuGet.org
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate

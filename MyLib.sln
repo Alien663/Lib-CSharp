@@ -9,8 +9,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alien.Common.Excel", "Excel
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alien.Common.Mail", "Mail\Alien.Common.Mail.csproj", "{7E6BC371-173B-4CCD-9359-944D90BC2766}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alien.Common.Config", "Config\Alien.Common.Config.csproj", "{641C1923-8DD7-4906-8E32-59A1635E9DF0}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alien.Common.Utility", "Utility\Alien.Common.Utility.csproj", "{662B837D-24EE-450B-B93A-4DB31EE56153}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alien.Common.All", "Alien.Common.All\Alien.Common.All.csproj", "{34AAB617-4BA8-4DDA-96D8-FAFA42418F42}"
@@ -33,10 +31,6 @@ Global
 		{7E6BC371-173B-4CCD-9359-944D90BC2766}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7E6BC371-173B-4CCD-9359-944D90BC2766}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7E6BC371-173B-4CCD-9359-944D90BC2766}.Release|Any CPU.Build.0 = Release|Any CPU
-		{641C1923-8DD7-4906-8E32-59A1635E9DF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{641C1923-8DD7-4906-8E32-59A1635E9DF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{641C1923-8DD7-4906-8E32-59A1635E9DF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{641C1923-8DD7-4906-8E32-59A1635E9DF0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{662B837D-24EE-450B-B93A-4DB31EE56153}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{662B837D-24EE-450B-B93A-4DB31EE56153}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{662B837D-24EE-450B-B93A-4DB31EE56153}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System.Collections.Generic;
 using Alien.Common.Mail;
 using Alien.Common.Mail.Models;
@@ -25,7 +25,6 @@ public class MailTest
             BCC = new List<string> { "test@demo.com" },
             Subject = "Test",
             Body = htmlBody,
-            Attachments = new List<string> { @".\icon.png" }
         };
         #endregion
 
@@ -39,6 +38,7 @@ public class MailTest
                 FilePath = @".\icon.png"
             }
         });
+        mail.setAttachment(@".\icon.png");
         fakeClient.Send(mail);
         #endregion
 
@@ -58,20 +58,10 @@ public class MailTest
             Sender = "test@demo.com",
             To = new List<string> { "test@demo.com" },
             Subject = "Test",
-            Attachments = new List<string> { @".\icon.png" }
         };
         #endregion
 
         #region Act
-        mail.setPicture(ID: "WrongID", FilePath: @".\icon.png", Mime: "img/png");
-        mail.setPicture(new List<MailPictureModel>
-        {
-            new MailPictureModel
-            {
-                ID = "logo2",
-                FilePath = @".\WrongPath.png"
-            }
-        });
         #endregion
 
         #region Assert
@@ -98,7 +88,6 @@ public class MailTest
             Sender = "test@demo.com",
             To = new List<string> { "test@demo.com" },
             Subject = "Test",
-            Attachments = new List<string> { @".\WrongPath.png" }
         };
         #endregion
 
@@ -106,11 +95,7 @@ public class MailTest
         #endregion
 
         #region Assert
-        Assert.Throws<ArgumentException>(() => { foreach(var item in mail.Attachments)
-            {
-                Console.WriteLine(item);
-            }
-        });
+        Assert.Throws<ArgumentException>(() => mail.setAttachment(@".\WrongPath.png"), "File not found");
         #endregion
     }
 

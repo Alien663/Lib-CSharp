@@ -23,6 +23,40 @@
 
 ---
 
+## 🚀 GitHub Actions 發佈 NuGet
+
+已提供 workflow：`.github/workflows/publish-nuget.yml`
+
+### 1) 設定 GitHub Secret
+
+在 GitHub Repository 設定：
+
+- `Settings` → `Secrets and variables` → `Actions` → `New repository secret`
+- 名稱：`NUGET_API_KEY`
+- 值：你的 NuGet.org API Key
+
+### 2) 以 Tag 觸發發佈
+
+推送 `v*` tag（例如 `v1.0.1`）即可自動打包並發佈：
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+Workflow 會發佈以下 package：
+
+- `Alien.Common.Config`
+- `Alien.Common.Excel`
+- `Alien.Common.Mail`
+- `Alien.Common.All`
+
+### 3) 手動觸發（可選）
+
+你也可以在 GitHub Actions 頁面手動執行 `Publish NuGet Packages`，並可選填版本號（例如 `1.0.2`）。
+
+---
+
 ## 🔧 使用範例
 
 更多參數使用請參照Unit Test(其實就是我懶得寫那麼詳細的README)
@@ -82,3 +116,6 @@ fs.Write(data, 0, data.Length);
 ## 📝授權
 
 MIT License - 請隨意使用、改造、甚至忘記我曾經存在。
+
+
+

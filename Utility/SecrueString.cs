@@ -9,7 +9,7 @@ public class SecrueString : IDisposable
 {
     private byte[] _buffer;
     private bool _disposed;
-    private AesGcmCrypto.EncryptedData encryptedData;
+    private byte[] _key;
 
     public int Length => _buffer.Length;
 
@@ -21,8 +21,8 @@ public class SecrueString : IDisposable
         try
         {
             var cryptor = new AesGcmCrypto();
-            var encryptedData = cryptor.Encrypt(input);
-            _buffer = encryptedData.CipherText;
+            _key = RandomNumberGenerator.GetBytes(32);
+            _buffer = cryptor.Encrypt(input, _key);
         }
         catch
         {
@@ -43,12 +43,11 @@ public class SecrueString : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         var cryptor = new AesGcmCrypto();
-        var decrypted = cryptor.DecryptByte(encryptedData);
+        var decrypted = Encoding.UTF8.GetBytes(cryptor.Decrypt(_buffer, _key));
         try
         {
             if (decrypted.Length > destination.Length)
                 throw new ArgumentException("Destination buffer is too small.", nameof(destination));
-
             decrypted.CopyTo(destination);
             return decrypted.Length;
         }
@@ -67,7 +66,7 @@ public class SecrueString : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         var cryptor = new AesGcmCrypto();
-        var decrypted = cryptor.DecryptByte(encryptedData);
+        var decrypted = Encoding.UTF8.GetBytes(cryptor.Decrypt(_buffer, _key));
         try
         {
             action(decrypted);
@@ -86,7 +85,7 @@ public class SecrueString : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         var cryptor = new AesGcmCrypto();
-        var decrypted = cryptor.DecryptByte(encryptedData);
+        var decrypted = Encoding.UTF8.GetBytes(cryptor.Decrypt(_buffer, _key));
         try
         {
             return Encoding.UTF8.GetString(decrypted);
@@ -115,9 +114,9 @@ public class SecrueString : IDisposable
         }
 
         // Clear AES key and IV
-        if (encryptedData.Key != null)
+        if (_key != null)
         {
-            Array.Clear(encryptedData.Key, 0, encryptedData.Key.Length);
+            Array.Clear(_key, 0, _key.Length);
         }
 
         _disposed = true;

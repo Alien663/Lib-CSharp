@@ -8,46 +8,44 @@ public class AesGcmCrypto
     private const int NonceSize = 12; // AEC-GCM recommand Nonce size
     private const int TagSize = 16; // AES-GCM recommand Tag size
 
-    public EncryptedData Encrypt(string plaintext, byte[]? key  = null, byte[]? iv = null, byte[]? aad = null)
+    public byte[] Encrypt(string plaintext, byte[] key, byte[]? add = null)
     {
-        if(key is null)
-            key = RandomNumberGenerator.GetBytes(32); // create a 256-bit key
-        if(iv is null)
-            iv = RandomNumberGenerator.GetBytes(NonceSize); // create a random nonce
-
-        byte[] nonce = RandomNumberGenerator.GetBytes(NonceSize); // create a random nonce
-        byte[] cipherText = new byte[plaintext.Length];
+        byte[] nonce = RandomNumberGenerator.GetBytes(NonceSize);
+        byte[] plainTextBytes = Encoding.UTF8.GetBytes(plaintext);
+        byte[] cipherText = new byte[plainTextBytes.Length];
         byte[] tag = new byte[TagSize];
-        byte[] plainTextByte = Encoding.UTF8.GetBytes(plaintext);
+
         using (var aes = new AesGcm(key, TagSize))
         {
-            aes.Encrypt(nonce, plainTextByte, cipherText, tag, aad);
-            CryptographicOperations.ZeroMemory(key); // clear the key from memory
-            return new EncryptedData(cipherText, key, nonce, tag);
+            aes.Encrypt(nonce, plainTextBytes, cipherText, tag, add);
         }
+
+        byte[] result = new byte[NonceSize + TagSize + cipherText.Length];
+        Buffer.BlockCopy(nonce, 0, result, 0, NonceSize);
+        Buffer.BlockCopy(cipherText, 0, result, NonceSize, cipherText.Length);
+        Buffer.BlockCopy(tag, 0, result, NonceSize + cipherText.Length, TagSize);
+
+        return result;
     }
 
-    public string Decrypt(EncryptedData encryptedData, byte[]? aad = null)
+    public string Decrypt(byte[] ciphertext, byte[] key, byte[]? add = null)
     {
-        var plaintextBytes = DecryptByte(encryptedData, aad);
-        return Encoding.UTF8.GetString(plaintextBytes);
-    }
+        byte[] nonce = new byte[NonceSize];
+        Buffer.BlockCopy(ciphertext, 0, nonce, 0, NonceSize);
 
-    public byte[] DecryptByte(EncryptedData encryptedData, byte[]? aad = null)
-    {
-        using (var aes = new AesGcm(encryptedData.Key, TagSize))
+        int cipherTextLength = ciphertext.Length - NonceSize - TagSize;
+        byte[] cipherText = new byte[cipherTextLength];
+        Buffer.BlockCopy(ciphertext, NonceSize, cipherText, 0, cipherTextLength);
+
+        byte[] tag = new byte[TagSize];
+        Buffer.BlockCopy(ciphertext, NonceSize + cipherTextLength, tag, 0, TagSize);
+
+        byte[] plainText = new byte[cipherTextLength];
+        using(var aes = new AesGcm(key, TagSize))
         {
-            byte[] plaintext = new byte[encryptedData.CipherText.Length];
-            aes.Decrypt(encryptedData.Nonce, encryptedData.CipherText, encryptedData.Tag, plaintext, aad);
-            CryptographicOperations.ZeroMemory(encryptedData.Key); // clear the key from memory
-            return plaintext;
+            aes.Decrypt(nonce, cipherText, tag, plainText, add);
         }
-    }
 
-    public record EncryptedData(
-        byte[] CipherText,
-        byte[] Key,
-        byte[] Nonce,
-        byte[] Tag
-    );
+        return Encoding.UTF8.GetString(plainText);
+    }
 }

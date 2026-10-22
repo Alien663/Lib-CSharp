@@ -1,15 +1,12 @@
-using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using Alien.Common.Excel;
-using Newtonsoft.Json;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 
 namespace TestMyLib;
 
-[TestFixture, Order(1)]
+[TestFixture]
 public class Write_DataTable
 {
     private DataTable dtData = GetInitialData.GetDataTable();
@@ -125,7 +122,7 @@ public class Write_DataTable
     }
 }
 
-[TestFixture, Order(2)]
+[TestFixture]
 public class Write_DataSet
 {
     private DataSet dsData = GetInitialData.GetDataSet();
@@ -289,7 +286,7 @@ public class Write_DataSet
     }
 }
 
-[TestFixture, Order(3)]
+[TestFixture]
 public class Write_DataModel
 {
     private List<StudentModel> studentModels = GetInitialData.GetDataModel();

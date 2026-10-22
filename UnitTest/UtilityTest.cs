@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System.Data;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +9,7 @@ namespace TestMyLib;
 [TestFixture]
 public class UtilityTest
 {
-    [Test, Order(1)]
+    [Test]
     public void DataTable2ClassModel()
     {
         #region Arrange
@@ -36,7 +36,7 @@ public class UtilityTest
         #endregion
     }
 
-    [Test, Order(2)]
+    [Test]
     public void ClassModel2DataTable()
     {
         #region Arrange
@@ -62,7 +62,7 @@ public class UtilityTest
         #endregion
     }
 
-    [Test, Order(3)]
+    [Test]
     public void SegmentationTest()
     {
         #region Arrange
@@ -88,7 +88,7 @@ public class UtilityTest
         #endregion
     }
 
-    [Test, Order(4)]
+    [Test]
     public void TokenizationTest()
     {
         #region Arrange

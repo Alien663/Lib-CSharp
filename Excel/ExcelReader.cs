@@ -1,25 +1,21 @@
 using System.ComponentModel;
 using System.Data;
+using System.Globalization;
 using System.Numerics;
 using System.Reflection;
-using NPOI.HSSF.UserModel;
-using NPOI.SS.Formula;
-using NPOI.SS.UserModel;
-using NPOI.XSSF.UserModel;
+using ClosedXML.Excel;
 
 namespace Alien.Common.Excel;
 
 public class ExcelReader : IExcelReader, IDisposable
 {
     private bool _disposed;
-    private IWorkbook workbook;
-    private AnchorModel anchor;
-    private DataRangeModel dataRange;
-    private SheetRangeModel sheetRange;
+    private readonly AnchorModel anchor;
+    private readonly DataRangeModel dataRange;
+    private readonly SheetRangeModel sheetRange;
 
     public ExcelReader()
     {
-        workbook = new XSSFWorkbook();
         anchor = new AnchorModel();
         dataRange = new DataRangeModel();
         sheetRange = new SheetRangeModel();
@@ -28,209 +24,215 @@ public class ExcelReader : IExcelReader, IDisposable
     public DataTable ToDataTable(byte[] file)
     {
         using var ms = new MemoryStream(file);
-        try
-        {
-            workbook = new XSSFWorkbook(ms);
-            DataTable result = readSheet(sheetRange.StartIndex);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Failed to read Excel file", ex);
-        }
-        finally
-        {
-            ms.Close();
-        }
-
+        using var workbook = new XLWorkbook(ms);
+        var worksheet = workbook.Worksheet(sheetRange.StartIndex + 1);
+        return ReadSheet(worksheet);
     }
+
     public DataSet ToDataSet(byte[] file)
     {
         using var ms = new MemoryStream(file);
-        try
+        using var workbook = new XLWorkbook(ms);
+
+        var result = new DataSet();
+        int start = Math.Max(0, sheetRange.StartIndex);
+        int endExclusive = sheetRange.EndIndex == 0
+            ? workbook.Worksheets.Count
+            : Math.Min(sheetRange.EndIndex, workbook.Worksheets.Count);
+
+        for (int i = start; i < endExclusive; i++)
         {
-            workbook = new XSSFWorkbook(ms);
-            DataSet result = new DataSet();
-            for (int i = sheetRange.StartIndex; i < (sheetRange.EndIndex == 0 ? workbook.NumberOfSheets : sheetRange.EndIndex); i++)
-            {
-                DataTable dt = readSheet(i);
-                result.Tables.Add(dt);
-            }
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Failed to read Excel file", ex);
-        }
-        finally
-        {
-            ms.Close();
+            var worksheet = workbook.Worksheet(i + 1);
+            result.Tables.Add(ReadSheet(worksheet));
         }
 
+        return result;
     }
+
     public List<T> ToList<T>(byte[] file) where T : new()
     {
         using var ms = new MemoryStream(file);
-        workbook = new XSSFWorkbook(ms);
-        ISheet sheet = workbook.GetSheetAt(sheetRange.StartIndex);
-        IRow row = sheet.GetRow(anchor.CellY);
-        List<T> dmResult = new List<T>();
-        List<string> columns = new List<string>();
+        using var workbook = new XLWorkbook(ms);
 
-        for (int i = anchor.CellX; i < (dataRange.RangeX == 0 ? row.LastCellNum : anchor.CellX + dataRange.RangeX); i++)
+        var sheet = workbook.Worksheet(sheetRange.StartIndex + 1);
+        var headerRowIndex = anchor.CellY + 1;
+
+        var headerRow = sheet.Row(headerRowIndex);
+        var lastColumn = dataRange.RangeX == 0
+            ? (headerRow.LastCellUsed()?.Address.ColumnNumber ?? anchor.CellX + 1)
+            : anchor.CellX + dataRange.RangeX;
+
+        var columns = new List<string>();
+        for (int col = anchor.CellX + 1; col <= lastColumn; col++)
         {
-            columns.Add(row.GetCell(i).ToString());
+            columns.Add(sheet.Cell(headerRowIndex, col).GetString());
         }
 
-        for (int i = anchor.CellY + 1; i <= (dataRange.RangeY == 0 ? sheet.LastRowNum : anchor.CellY + dataRange.RangeY); i++)
+        int startRow = anchor.CellY + 2;
+        int endRow = dataRange.RangeY == 0
+            ? (sheet.LastRowUsed()?.RowNumber() ?? anchor.CellY + 1)
+            : anchor.CellY + 1 + dataRange.RangeY;
+
+        var result = new List<T>();
+        var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+        for (int rowIndex = startRow; rowIndex <= endRow; rowIndex++)
         {
-            T t = new T();
-            PropertyInfo[] propertys = t.GetType().GetProperties();
-            row = sheet.GetRow(i);
-            if (row != null)
+            var row = sheet.Row(rowIndex);
+            if (row.IsEmpty()) continue;
+
+            var item = new T();
+
+            foreach (var pi in properties)
             {
-                foreach (PropertyInfo pi in propertys)
-                {
-                    var attr = pi.GetCustomAttribute<DisplayNameAttribute>(false);
-                    if (columns.Contains(pi.Name) || columns.Contains(attr.DisplayName))
-                    {
-                        if (!pi.CanWrite) continue;
-                        ICell cell = columns.IndexOf(pi.Name) == -1 ?
-                            row.GetCell(anchor.CellX + columns.IndexOf(attr.DisplayName)) :
-                            row.GetCell(anchor.CellX + columns.IndexOf(pi.Name));
+                if (!pi.CanWrite) continue;
 
-                        string value = "";
-                        switch (cell.CellType)
-                        {
-                            case CellType.String:
-                                value = cell.StringCellValue;
-                                break;
-                            case CellType.Numeric:
-                                value = cell.NumericCellValue.ToString();
-                                break;
-                            case CellType.Boolean:
-                                value = cell.BooleanCellValue.ToString();
-                                break;
-                            case CellType.Formula:
-                                value = cell.CachedFormulaResultType.ToString();
-                                break;
-                            case CellType.Unknown:
-                                value = cell.StringCellValue;
-                                break;
-                            case CellType.Error:
-                                value = cell.ErrorCellValue.ToString();
-                                break;
-                        }
-                        pi.SetValue(t, ConvertValue(value, pi.PropertyType), null);
-                    }
+                var displayName = pi.GetCustomAttribute<DisplayNameAttribute>(false)?.DisplayName;
+                int index = columns.IndexOf(pi.Name);
+                if (index < 0 && !string.IsNullOrWhiteSpace(displayName))
+                {
+                    index = columns.IndexOf(displayName);
                 }
-                dmResult.Add(t);
+                if (index < 0) continue;
+
+                var cell = sheet.Cell(rowIndex, anchor.CellX + 1 + index);
+                var valueText = GetCellString(cell);
+
+                if (string.IsNullOrWhiteSpace(valueText) && IsNullable(pi.PropertyType))
+                {
+                    pi.SetValue(item, null);
+                    continue;
+                }
+
+                pi.SetValue(item, ConvertValue(valueText, pi.PropertyType));
             }
+
+            result.Add(item);
         }
-        return dmResult;
+
+        return result;
     }
-    
+
     public void SetAnchor(int x, int y)
     {
         anchor.CellX = x;
         anchor.CellY = y;
     }
+
     public void SetDataRange(int columns, int rows)
     {
         dataRange.RangeX = columns;
         dataRange.RangeY = rows;
     }
+
     public void SetSheetRange(int start, int end)
     {
         sheetRange.StartIndex = start;
         sheetRange.EndIndex = end;
     }
 
-    private object ConvertValue(string value, Type targetType)
+    private DataTable ReadSheet(IXLWorksheet sheet)
     {
-        return targetType.Name switch
-        {
-            "UInt16" => Convert.ToUInt16(value),
-            "UInt32" => Convert.ToUInt32(value),
-            "UInt64" => Convert.ToUInt64(value),
-            "Int16" => Convert.ToInt16(value),
-            "Int32" => Convert.ToInt32(value),
-            "Int64" => Convert.ToInt64(value),
-            "Single" => Convert.ToSingle(value),
-            "Double" => Convert.ToDouble(value),
-            "Decimal" => Convert.ToDecimal(value),
-            "BigInteger" => BigInteger.Parse(value),
-            "Boolean" => Convert.ToBoolean(value),
-            "DateTime" => Convert.ToDateTime(value),
-            "DateOnly" => DateOnly.Parse(value),
-            "TimeOnly" => TimeOnly.Parse(value),
-            _ => value,
-        };
-    }
-    private DataTable readSheet(int sheetIndex)
-    {
-        ISheet sheet = workbook.GetSheetAt(sheetIndex);
-        IRow row = sheet.GetRow(anchor.CellY);
-        DataTable dt = new DataTable();
-        dt.TableName = sheet.SheetName;
+        var dt = new DataTable { TableName = sheet.Name };
+        int headerRowIndex = anchor.CellY + 1;
 
-        for (int i = anchor.CellX; i < (dataRange.RangeX == 0 ? row.LastCellNum : anchor.CellX + dataRange.RangeX); i++)
+        var headerRow = sheet.Row(headerRowIndex);
+        int lastColumn = dataRange.RangeX == 0
+            ? (headerRow.LastCellUsed()?.Address.ColumnNumber ?? anchor.CellX + 1)
+            : anchor.CellX + dataRange.RangeX;
+
+        for (int col = anchor.CellX + 1; col <= lastColumn; col++)
         {
-            string cellValue = row.GetCell(i).ToString();
-            dt.Columns.Add(cellValue);
-        }
-        for (int i = 0; i < (dataRange.RangeY == 0 ? sheet.LastRowNum - anchor.CellY : dataRange.RangeY); i++)
-        {
-            DataRow dr = dt.NewRow();
-            row = sheet.GetRow(i + 1 + anchor.CellY);
-            if (row != null)
+            string columnName = sheet.Cell(headerRowIndex, col).GetString();
+            if (string.IsNullOrWhiteSpace(columnName))
             {
-                for (int j = 0; j < (dataRange.RangeX == 0 ? row.LastCellNum - anchor.CellX : dataRange.RangeX); j++)
-                {
-                    var cell = row.GetCell(j + anchor.CellX);
-                    switch (cell.CellType)
-                    {
-                        case CellType.Numeric when DateUtil.IsCellDateFormatted(cell):
-                            dr[j] = cell.DateCellValue;
-                            break;
-                        case CellType.Formula:
-                            HSSFFormulaEvaluator eva = new HSSFFormulaEvaluator(workbook);
-                            dr[j] = eva.Evaluate(cell).StringValue;
-                            break;
-                        case CellType.Numeric:
-                            dr[j] = cell.NumericCellValue;
-                            break;
-                        case CellType.Boolean:
-                            dr[j] = cell.BooleanCellValue;
-                            break;
-                        case CellType.Error:
-                            dr[j] = cell.ErrorCellValue;
-                            break;
-                        default:
-                            dr[j] = cell.StringCellValue;
-                            break;
-                    }
-                }
+                columnName = $"Column{col - anchor.CellX}";
+            }
+            dt.Columns.Add(columnName);
+        }
+
+        int startRow = anchor.CellY + 2;
+        int endRow = dataRange.RangeY == 0
+            ? (sheet.LastRowUsed()?.RowNumber() ?? anchor.CellY + 1)
+            : anchor.CellY + 1 + dataRange.RangeY;
+
+        for (int rowIndex = startRow; rowIndex <= endRow; rowIndex++)
+        {
+            var dr = dt.NewRow();
+            for (int col = anchor.CellX + 1; col <= lastColumn; col++)
+            {
+                var cell = sheet.Cell(rowIndex, col);
+                dr[col - anchor.CellX - 1] = GetCellObjectValue(cell);
             }
             dt.Rows.Add(dr);
         }
+
         return dt;
+    }
+
+    private static object GetCellObjectValue(IXLCell cell)
+    {
+        if (cell.IsEmpty()) return DBNull.Value;
+
+        return cell.DataType switch
+        {
+            XLDataType.Boolean => cell.GetBoolean(),
+            XLDataType.Number => cell.GetDouble(),
+            XLDataType.DateTime => cell.GetDateTime(),
+            XLDataType.TimeSpan => cell.GetTimeSpan(),
+            _ => cell.GetString()
+        };
+    }
+
+    private static string GetCellString(IXLCell cell)
+    {
+        if (cell.IsEmpty()) return string.Empty;
+
+        return cell.DataType switch
+        {
+            XLDataType.Boolean => cell.GetBoolean().ToString(),
+            XLDataType.Number => cell.GetDouble().ToString(CultureInfo.InvariantCulture),
+            XLDataType.DateTime => cell.GetDateTime().ToString("O", CultureInfo.InvariantCulture),
+            XLDataType.TimeSpan => cell.GetTimeSpan().ToString("c", CultureInfo.InvariantCulture),
+            _ => cell.GetString()
+        };
+    }
+
+    private static bool IsNullable(Type type)
+        => !type.IsValueType || Nullable.GetUnderlyingType(type) is not null;
+
+    private static object? ConvertValue(string value, Type targetType)
+    {
+        var actualType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+        if (actualType == typeof(string)) return value;
+        if (string.IsNullOrWhiteSpace(value))
+            return Nullable.GetUnderlyingType(targetType) is not null ? null : string.Empty;
+
+        return actualType.Name switch
+        {
+            "UInt16" => Convert.ToUInt16(value, CultureInfo.InvariantCulture),
+            "UInt32" => Convert.ToUInt32(value, CultureInfo.InvariantCulture),
+            "UInt64" => Convert.ToUInt64(value, CultureInfo.InvariantCulture),
+            "Int16" => Convert.ToInt16(value, CultureInfo.InvariantCulture),
+            "Int32" => Convert.ToInt32(value, CultureInfo.InvariantCulture),
+            "Int64" => Convert.ToInt64(value, CultureInfo.InvariantCulture),
+            "Single" => Convert.ToSingle(value, CultureInfo.InvariantCulture),
+            "Double" => Convert.ToDouble(value, CultureInfo.InvariantCulture),
+            "Decimal" => Convert.ToDecimal(value, CultureInfo.InvariantCulture),
+            "BigInteger" => BigInteger.Parse(value, CultureInfo.InvariantCulture),
+            "Boolean" => Convert.ToBoolean(value, CultureInfo.InvariantCulture),
+            "DateTime" => DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+            "DateOnly" => DateOnly.Parse(value, CultureInfo.InvariantCulture),
+            "TimeOnly" => TimeOnly.Parse(value, CultureInfo.InvariantCulture),
+            _ => Convert.ChangeType(value, actualType, CultureInfo.InvariantCulture)
+        };
     }
 
     public void Dispose()
     {
-        Dispose(true);
+        if (_disposed) return;
+        _disposed = true;
         GC.SuppressFinalize(this);
-    }
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposed)
-        {
-            if (disposing)
-            {
-                workbook.Dispose();
-            }
-            _disposed = true;
-        }
     }
 }

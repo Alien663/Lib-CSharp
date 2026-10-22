@@ -42,7 +42,7 @@ MailSender.Send(mail, config);
 - System.Net.Mail
 
 ## 🛠 Compatibility
-- .NET 6 and above
+- .NET 10 and above
 
 ## 👨‍💻 Author
 Alien663

@@ -35,11 +35,11 @@ fs.Write(data, 0, data.Length);
 
 ## 📘 Dependencies
 
-- NPOI
+- Closed XML
 
 ## 🛠 Compatibility
 
-- .NET 6 and above
+- .NET 10 and above
 
 ## 🧙 Author
 

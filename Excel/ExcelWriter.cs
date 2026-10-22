@@ -1,27 +1,24 @@
 using System.ComponentModel;
 using System.Data;
 using System.Reflection;
-using NPOI.SS.UserModel;
-using NPOI.XSSF.UserModel;
+using ClosedXML.Excel;
 
 namespace Alien.Common.Excel;
 
 public class ExcelWriter : IExcelWriter, IDisposable
 {
     private bool _disposed;
-    private IWorkbook workbook;
-    private AnchorModel anchor;
-    private DataRangeModel dataRange;
-    private SheetRangeModel sheetRange;
-    private Dictionary<string, string> DataTypeStyle;
+    private readonly AnchorModel anchor;
+    private readonly DataRangeModel dataRange;
+    private readonly SheetRangeModel sheetRange;
+    private readonly Dictionary<string, string> dataTypeStyle;
 
     public ExcelWriter(Dictionary<string, string>? customDataTypeStyle = null)
     {
-        workbook = new XSSFWorkbook();
         anchor = new AnchorModel();
         dataRange = new DataRangeModel();
         sheetRange = new SheetRangeModel();
-        DataTypeStyle = customDataTypeStyle ?? new Dictionary<string, string>
+        dataTypeStyle = customDataTypeStyle ?? new Dictionary<string, string>
         {
             { "UInt16", "#,##0" },
             { "UInt32", "#,##0" },
@@ -37,39 +34,45 @@ public class ExcelWriter : IExcelWriter, IDisposable
 
     public byte[] Export(DataTable source)
     {
-        ISheet temp = workbook.CreateSheet(source.TableName ?? "Sheet1");
-        setSheet(temp, source);
-        MemoryStream stream = new MemoryStream();
-        workbook.Write(stream, false);
-        byte[] result = stream.ToArray();
-        stream.Dispose();
-        return result;
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add(string.IsNullOrWhiteSpace(source.TableName) ? "Sheet1" : source.TableName);
+        SetSheet(sheet, source);
+
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
     }
 
     public byte[] Export(DataSet source)
     {
-        for (int i = sheetRange.StartIndex; i < (sheetRange.EndIndex == 0 ? source.Tables.Count : sheetRange.EndIndex); i++)
+        using var workbook = new XLWorkbook();
+
+        int start = Math.Max(0, sheetRange.StartIndex);
+        int endExclusive = sheetRange.EndIndex == 0
+            ? source.Tables.Count
+            : Math.Min(sheetRange.EndIndex, source.Tables.Count);
+
+        for (int i = start; i < endExclusive; i++)
         {
-            DataTable dt = source.Tables[i];
-            ISheet temp = workbook.CreateSheet(source.Tables[i].TableName ?? $"Sheet{i}");
-            setSheet(temp, source.Tables[i]);
+            var table = source.Tables[i];
+            var sheet = workbook.Worksheets.Add(string.IsNullOrWhiteSpace(table.TableName) ? $"Sheet{i}" : table.TableName);
+            SetSheet(sheet, table);
         }
-        MemoryStream stream = new MemoryStream();
-        workbook.Write(stream, false);
-        byte[] result = stream.ToArray();
-        stream.Close();
-        return result;
+
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
     }
 
     public byte[] Export<T>(List<T> source)
     {
-        ISheet temp = workbook.CreateSheet(typeof(T).Name);
-        setSheet(temp, source);
-        MemoryStream stream = new MemoryStream();
-        workbook.Write(stream, false);
-        byte[] result = stream.ToArray();
-        stream.Dispose();
-        return result;
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add(typeof(T).Name);
+        SetSheet(sheet, source);
+
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
     }
 
     public void SetAnchor(int x, int y)
@@ -92,146 +95,122 @@ public class ExcelWriter : IExcelWriter, IDisposable
 
     public void setDataTypeStyle(Dictionary<string, string> pairs)
     {
-        foreach (string pair in pairs.Keys)
+        foreach (var pair in pairs)
         {
-            if (DataTypeStyle.ContainsKey(pair))
-            {
-                DataTypeStyle[pair] = pairs[pair];
-            }
-            else
-            {
-                DataTypeStyle.Add(pair, pairs[pair]);
-            }
+            dataTypeStyle[pair.Key] = pair.Value;
         }
     }
 
-    private void setSheet(ISheet sheet, DataTable source)
+    private void SetSheet(IXLWorksheet sheet, DataTable source)
     {
+        int headerRowIndex = anchor.CellY + 1;
+        int dataStartRow = headerRowIndex + 1;
+        int startCol = anchor.CellX + 1;
+
         if (anchor.CellY >= 0)
         {
-            IRow header = sheet.CreateRow(anchor.CellY);
             for (int i = 0; i < source.Columns.Count; i++)
             {
-                ICell cell = header.CreateCell(i + anchor.CellX);
-                cell.SetCellValue(source.Columns[i].ColumnName);
+                sheet.Cell(headerRowIndex, startCol + i).Value = source.Columns[i].ColumnName;
             }
         }
+
         for (int i = 0; i < source.Rows.Count; i++)
         {
-            IRow rows = sheet.CreateRow(i + anchor.CellY + 1);
+            int row = dataStartRow + i;
             for (int j = 0; j < source.Columns.Count; j++)
             {
-                ICell cell = rows.CreateCell(j + anchor.CellX);
-                if (DataTypeStyle.ContainsKey(source.Columns[j].DataType.Name))
+                var cell = sheet.Cell(row, startCol + j);
+                var typeName = source.Columns[j].DataType.Name;
+
+                if (dataTypeStyle.TryGetValue(typeName, out var format))
                 {
-                    ICellStyle _datastyle = workbook.CreateCellStyle();
-                    _datastyle.DataFormat = workbook.CreateDataFormat()
-                                .GetFormat(DataTypeStyle[source.Columns[j].DataType.Name]);
-                    cell.CellStyle = _datastyle;
+                    cell.Style.NumberFormat.Format = format;
                 }
-                SetCellValue(cell, source.Rows[i][j], source.Columns[j].DataType.Name);
+
+                SetCellValue(cell, source.Rows[i][j], typeName);
             }
         }
     }
 
-    private void setSheet<T>(ISheet sheet, List<T> source)
+    private void SetSheet<T>(IXLWorksheet sheet, List<T> source)
     {
-        PropertyInfo[] Props = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        var props = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        int headerRowIndex = anchor.CellY + 1;
+        int dataStartRow = headerRowIndex + 1;
+        int startCol = anchor.CellX + 1;
 
-        int i = anchor.CellX;
         if (anchor.CellY >= 0)
         {
-            IRow header = sheet.CreateRow(anchor.CellY);
-            foreach (PropertyInfo prop in Props)
+            for (int i = 0; i < props.Length; i++)
             {
-                ICell cell = header.CreateCell(i++);
-                var attr = prop.GetCustomAttribute<DisplayNameAttribute>(false);
-                if (attr == null)
-                    cell.SetCellValue(prop.Name);
-                else
-                    cell.SetCellValue(attr.DisplayName);
+                var attr = props[i].GetCustomAttribute<DisplayNameAttribute>(false);
+                sheet.Cell(headerRowIndex, startCol + i).Value = attr?.DisplayName ?? props[i].Name;
             }
         }
-        i = anchor.CellY;
-        foreach (var item in source)
-        {
-            IRow rows = sheet.CreateRow(++i);
-            for (int j = 0; j < Props.Length; j++)
-            {
-                ICell cell = rows.CreateCell(j + anchor.CellX);
-                if (DataTypeStyle.ContainsKey(Props[j].PropertyType.Name))
-                {
-                    ICellStyle _datastyle = workbook.CreateCellStyle();
-                    _datastyle.DataFormat = workbook.CreateDataFormat()
-                                .GetFormat(DataTypeStyle[Props[j].PropertyType.Name]);
-                    cell.CellStyle = _datastyle;
-                }
-                var cellValue = Props[j].GetValue(item, null);
 
-                SetCellValue(cell, cellValue, Props[j].PropertyType.Name);
+        for (int i = 0; i < source.Count; i++)
+        {
+            int row = dataStartRow + i;
+            for (int j = 0; j < props.Length; j++)
+            {
+                var cell = sheet.Cell(row, startCol + j);
+                var typeName = props[j].PropertyType.Name;
+
+                if (dataTypeStyle.TryGetValue(typeName, out var format))
+                {
+                    cell.Style.NumberFormat.Format = format;
+                }
+
+                var value = props[j].GetValue(source[i]);
+                SetCellValue(cell, value, typeName);
             }
         }
     }
 
-    private void SetCellValue(ICell cell, object value, string datatype)
+    private static void SetCellValue(IXLCell cell, object? value, string datatype)
     {
+        if (value is null)
+        {
+            cell.Value = string.Empty;
+            return;
+        }
+
         switch (datatype)
         {
             case "UInt16":
-                cell.SetCellType(CellType.Numeric);
-                cell.SetCellValue(Convert.ToUInt16(value));
-                break;
             case "UInt32":
-                cell.SetCellType(CellType.Numeric);
-                cell.SetCellValue(Convert.ToUInt32(value));
-                break;
             case "UInt64":
-                cell.SetCellType(CellType.Numeric);
-                cell.SetCellValue(Convert.ToUInt64(value));
-                break;
             case "Int16":
-                cell.SetCellType(CellType.Numeric);
-                cell.SetCellValue(Convert.ToInt16(value));
-                break;
             case "Int32":
-                cell.SetCellType(CellType.Numeric);
-                cell.SetCellValue(Convert.ToInt32(value));
-                break;
             case "Int64":
-                cell.SetCellType(CellType.Numeric);
-                cell.SetCellValue(Convert.ToInt64(value));
-                break;
-            case "Boolean":
-                cell.SetCellType(CellType.Boolean);
-                cell.SetCellValue(Convert.ToBoolean(value));
-                break;
-            case "Float":
+            case "Single":
             case "Double":
             case "Decimal":
-                cell.SetCellType(CellType.Numeric);
-                cell.SetCellValue(Convert.ToDouble(value));
+                cell.Value = Convert.ToDouble(value);
+                break;
+            case "Boolean":
+                cell.Value = Convert.ToBoolean(value);
+                break;
+            case "DateTime":
+                cell.Value = Convert.ToDateTime(value);
+                break;
+            case "DateOnly":
+                cell.Value = ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
+                break;
+            case "TimeOnly":
+                cell.Value = ((TimeOnly)value).ToTimeSpan();
                 break;
             default:
-                cell.SetCellType(CellType.String);
-                cell.SetCellValue(value.ToString());
+                cell.Value = value.ToString();
                 break;
         }
     }
 
     public void Dispose()
     {
-        Dispose(true);
+        if (_disposed) return;
+        _disposed = true;
         GC.SuppressFinalize(this);
-    }
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposed)
-        {
-            if (disposing)
-            {
-                workbook.Dispose();
-            }
-            _disposed = true;
-        }
     }
 }

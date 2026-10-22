@@ -26,7 +26,7 @@ string half = s.ToHalfWidth();
 - None
 
 ## 🛠 Compatibility
-- .NET 6 and above
+- .NET 10 and above
 
 ## 👨‍💻 Author
 Alien663
